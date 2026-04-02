@@ -7,6 +7,9 @@ const sharp = require("sharp");
 const DEFAULT_SOURCE = "products";
 const DEFAULT_OUTPUT = "compressed";
 const DEFAULT_QUALITY = 95;
+const DEFAULT_BASE_URL =
+  "https://raw.githubusercontent.com/ArtemZubarev/krai_products/main/compressed";
+const DEFAULT_LINKS_FILE = "compressed/links-by-model.txt";
 
 function parseArgs(argv) {
   const options = {
@@ -15,6 +18,8 @@ function parseArgs(argv) {
     force: false,
     lossless: false,
     quality: DEFAULT_QUALITY,
+    baseUrl: DEFAULT_BASE_URL,
+    linksFile: DEFAULT_LINKS_FILE,
   };
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -52,6 +57,18 @@ function parseArgs(argv) {
       continue;
     }
 
+    if (arg === "--base-url" && argv[index + 1]) {
+      options.baseUrl = argv[index + 1].replace(/\/+$/, "");
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--links-file" && argv[index + 1]) {
+      options.linksFile = argv[index + 1];
+      index += 1;
+      continue;
+    }
+
     if (arg === "--help" || arg === "-h") {
       options.help = true;
       continue;
@@ -71,6 +88,8 @@ Options:
   -o, --output <dir>   Output root directory for WebP files (default: compressed)
   -q, --quality <1-100> WebP quality for lossy mode (default: 95)
       --lossless        Use strict lossless WebP (can be larger than JPG)
+      --base-url <url>  Base URL used to build links in report
+      --links-file <p>  Path to text file with grouped links report
   -f, --force          Overwrite existing WebP files
   -h, --help           Show this help message
 `);
@@ -122,6 +141,49 @@ async function convertJpegToWebp(sourcePath, outputPath, options) {
     ? { lossless: true, effort: 6 }
     : { quality: options.quality, effort: 6 };
   await sharp(sourcePath).webp(webpOptions).toFile(outputPath);
+}
+
+function getModelGroup(sourceRoot, sourceFile) {
+  const relativeToSource = path.relative(sourceRoot, sourceFile);
+  const [firstSegment] = relativeToSource.split(path.sep);
+  return firstSegment || "root";
+}
+
+async function writeLinksReport(sourceRoot, files, options) {
+  const reportByModel = new Map();
+  const outputRoot = path.resolve(process.cwd(), options.output);
+  const linksFilePath = path.resolve(process.cwd(), options.linksFile);
+
+  for (const sourceFile of files) {
+    const outputFile = mapOutputPath(sourceRoot, outputRoot, sourceFile);
+    if (!(await exists(outputFile))) {
+      continue;
+    }
+
+    const model = getModelGroup(sourceRoot, sourceFile);
+    const relativeToOutput = path.relative(outputRoot, outputFile).split(path.sep).join("/");
+    const link = `${options.baseUrl}/${relativeToOutput}`;
+
+    if (!reportByModel.has(model)) {
+      reportByModel.set(model, []);
+    }
+    reportByModel.get(model).push(link);
+  }
+
+  const models = Array.from(reportByModel.keys()).sort((a, b) => a.localeCompare(b));
+  const lines = [];
+  for (const model of models) {
+    lines.push(`[${model}]`);
+    const links = reportByModel.get(model).sort((a, b) => a.localeCompare(b));
+    for (const link of links) {
+      lines.push(link);
+    }
+    lines.push("");
+  }
+
+  await fs.mkdir(path.dirname(linksFilePath), { recursive: true });
+  await fs.writeFile(linksFilePath, `${lines.join("\n").trim()}\n`, "utf8");
+  return linksFilePath;
 }
 
 async function main() {
@@ -177,12 +239,15 @@ async function main() {
     }
   }
 
+  const linksReportPath = await writeLinksReport(sourceRoot, files, options);
+
   console.log("");
   console.log("Done.");
   console.log(`Found:     ${stats.found}`);
   console.log(`Converted: ${stats.converted}`);
   console.log(`Skipped:   ${stats.skipped}`);
   console.log(`Failed:    ${stats.failed}`);
+  console.log(`Links:     ${path.relative(process.cwd(), linksReportPath)}`);
 
   if (stats.failed > 0) {
     process.exitCode = 1;

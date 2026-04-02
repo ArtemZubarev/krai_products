@@ -52,6 +52,7 @@ The script is restart-safe by default and skips already generated files unless `
 ## Links report
 
 On each run, the script also generates a text file with public URLs grouped by model.
+Links are written one per line with commas between values (every line has a trailing comma, except the last link in a model section).
 
 Default file: `compressed/links-by-model.txt`
 
@@ -59,7 +60,7 @@ Example:
 
 ```text
 [hikers]
-https://raw.githubusercontent.com/ArtemZubarev/krai_products/main/compressed/hikers/black/01.webp
-https://raw.githubusercontent.com/ArtemZubarev/krai_products/main/compressed/hikers/black/02.webp
+https://raw.githubusercontent.com/ArtemZubarev/krai_products/main/compressed/hikers/black/01.webp,
+https://raw.githubusercontent.com/ArtemZubarev/krai_products/main/compressed/hikers/black/02.webp,
 ...
 ```

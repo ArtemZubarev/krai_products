@@ -161,7 +161,10 @@ async function writeLinksReport(sourceRoot, files, options) {
     }
 
     const model = getModelGroup(sourceRoot, sourceFile);
-    const relativeToOutput = path.relative(outputRoot, outputFile).split(path.sep).join("/");
+    const relativeToOutput = path
+      .relative(outputRoot, outputFile)
+      .split(path.sep)
+      .join("/");
     const link = `${options.baseUrl}/${relativeToOutput}`;
 
     if (!reportByModel.has(model)) {
@@ -170,13 +173,17 @@ async function writeLinksReport(sourceRoot, files, options) {
     reportByModel.get(model).push(link);
   }
 
-  const models = Array.from(reportByModel.keys()).sort((a, b) => a.localeCompare(b));
+  const models = Array.from(reportByModel.keys()).sort((a, b) =>
+    a.localeCompare(b),
+  );
   const lines = [];
   for (const model of models) {
     lines.push(`[${model}]`);
     const links = reportByModel.get(model).sort((a, b) => a.localeCompare(b));
-    for (const link of links) {
-      lines.push(link);
+    for (let index = 0; index < links.length; index += 1) {
+      const link = links[index];
+      const suffix = index === links.length - 1 ? "" : ",";
+      lines.push(`${link}${suffix}`);
     }
     lines.push("");
   }
@@ -216,7 +223,7 @@ async function main() {
   console.log(
     options.lossless
       ? "Mode: strict lossless WebP"
-      : `Mode: quality=${options.quality} (visually lossless)`
+      : `Mode: quality=${options.quality} (visually lossless)`,
   );
 
   for (const sourceFile of files) {
@@ -235,7 +242,9 @@ async function main() {
     } catch (error) {
       stats.failed += 1;
       const message = error instanceof Error ? error.message : String(error);
-      console.error(`FAIL ${path.relative(process.cwd(), sourceFile)} -> ${message}`);
+      console.error(
+        `FAIL ${path.relative(process.cwd(), sourceFile)} -> ${message}`,
+      );
     }
   }
 

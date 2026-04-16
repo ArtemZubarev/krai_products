@@ -4,7 +4,7 @@
   "description": "Image optimizer for products JPG to lossless WebP",
   "main": "scripts/optimize-images.js",
   "scripts": {
-    "optimize:images": "node scripts/optimize-images.js",
+    "opt": "node scripts/optimize-images.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
